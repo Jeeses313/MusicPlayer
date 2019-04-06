@@ -8,6 +8,10 @@ My first app made on my free time after learning some programming.
 
 I wanted to test my skills at java and javafx and make easy to use music player.
 
+#### Why it doesn't work?
+
+Do other .jars work? If not, get Java on your computer. If yes, I don't know.
+
 #### Why are there no tests?
 
 Check first question.
@@ -22,7 +26,7 @@ Check first question.
 
 #### Are there any known bugs?
 
-If you click progress bar while player is paused pause stops working until song is switched. No idea why. 
+If you click progress bar while player is paused, pause stops working until song is switched. No idea why. 
 
 **I think** there is a small memory leak that increases memory usage when used for **a long** time
 
