@@ -24,7 +24,7 @@ Check first question.
 
 If you click progress bar while player is paused pause stops working until song is switched. No idea why. 
 
-**I think** there is a small memory leak that increases memory usage when uses for **a long** time
+**I think** there is a small memory leak that increases memory usage when used for **a long** time
 
 #### Where are all the settings stored?
 
