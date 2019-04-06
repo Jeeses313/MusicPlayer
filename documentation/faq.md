@@ -4,11 +4,11 @@
 
 My first app made on my free time after learning some programming.
 
-#### Why wast this made?
+#### Why was this made?
 
 I wanted to test my skills at java and javafx and make easy to use music player.
 
-#### Why it doesn't work?
+#### Why doesn't it work?
 
 Do other .jars work? If not, get Java on your computer. If yes, I don't know.
 
