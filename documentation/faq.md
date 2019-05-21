@@ -26,9 +26,7 @@ Check first question.
 
 #### Are there any known bugs?
 
-If you click progress bar while player is paused, pause stops working until song is switched. No idea why. 
-
-**I think** there is a small memory leak that increases memory usage when used for **a long** time
+**I think** there is **a small** memory leak that increases memory usage when used for **a long** time.
 
 #### Where are all the settings stored?
 
@@ -44,4 +42,4 @@ Because I either didn't want to do or didn't think of those things.
 
 #### Why should I use this app?
 
-I don't know. Why are you reading this faq?
+I don't know. Why not? Why are you even reading this faq?

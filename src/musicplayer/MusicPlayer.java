@@ -4,6 +4,8 @@ import com.sun.glass.ui.Screen;
 import java.io.File;
 import java.util.prefs.Preferences;
 import javafx.application.Application;
+import javafx.beans.value.ChangeListener;
+import javafx.beans.value.ObservableValue;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.scene.Scene;
@@ -14,6 +16,7 @@ import javafx.scene.control.ProgressBar;
 import javafx.scene.control.RadioButton;
 import javafx.scene.control.Slider;
 import javafx.scene.control.ToggleGroup;
+import javafx.scene.control.Tooltip;
 import javafx.scene.input.MouseButton;
 import javafx.scene.layout.Pane;
 import javafx.scene.media.MediaPlayer;
@@ -53,7 +56,7 @@ public class MusicPlayer extends Application {
         this.list = new SongList();
 
         works = this.list.init(Preferences.userRoot().get("path", ""));
-        
+
         primaryStage.setScene(scene);
 
         if (works) {
@@ -77,10 +80,24 @@ public class MusicPlayer extends Application {
 
         currentSongLabel = new Label("Playing now: " + currentSong);
         currentSongLabel.setTranslateX(205);
+        currentSongLabel.setTooltip(new Tooltip(currentSong));
+        currentSongLabel.textProperty().addListener(new ChangeListener<String>() {
+            @Override
+            public void changed(ObservableValue<? extends String> ov, String t, String t1) {
+                currentSongLabel.setTooltip(new Tooltip(currentSong));
+            }
+        });
 
         nextSongLabel = new Label("Playing next: " + nextSong);
         nextSongLabel.setTranslateX(205);
         nextSongLabel.setTranslateY(20);
+        nextSongLabel.setTooltip(new Tooltip(nextSong));
+        nextSongLabel.textProperty().addListener(new ChangeListener<String>() {
+            @Override
+            public void changed(ObservableValue<? extends String> ov, String t, String t1) {
+                nextSongLabel.setTooltip(new Tooltip(nextSong));
+            }
+        });
 
         ObservableList<String> data = FXCollections.observableArrayList();
         if (works) {
@@ -410,17 +427,21 @@ public class MusicPlayer extends Application {
         });
         timeSlider.setOnMouseClicked(ev -> {
             if (works) {
-                this.player.setStartTime(this.player.getMedia().getDuration().multiply(ev.getX() / timeSlider.getWidth()));
-                this.player.stop();
-                this.player.play();
+                this.player.seek(this.player.getMedia().getDuration().multiply(ev.getX() / timeSlider.getWidth()));
+                if (player.getStatus() != MediaPlayer.Status.PAUSED && player.getStatus() != MediaPlayer.Status.PLAYING) {
+                    timeSlider.setProgress(this.player.getCurrentTime().toSeconds() / this.player.getMedia().getDuration().toSeconds());
+                    timeLabel.setText(String.format("%02d:%02d", (int) ((this.player.getCurrentTime().toSeconds() % 3600) / 60), (int) ((this.player.getCurrentTime().toSeconds() % 60))) + "/" + String.format("%02d:%02d", (int) ((this.player.getMedia().getDuration().toSeconds() % 3600) / 60), (int) ((this.player.getMedia().getDuration().toSeconds() % 60))));
+                }
             }
 
         });
         timeSlider.setOnMouseDragged(ev -> {
             if (works) {
-                this.player.setStartTime(this.player.getMedia().getDuration().multiply(ev.getX() / timeSlider.getWidth()));
-                this.player.stop();
-                this.player.play();
+                this.player.seek(this.player.getMedia().getDuration().multiply(ev.getX() / timeSlider.getWidth()));
+                if (player.getStatus() != MediaPlayer.Status.PAUSED && player.getStatus() != MediaPlayer.Status.PLAYING) {
+                    timeSlider.setProgress(this.player.getCurrentTime().toSeconds() / this.player.getMedia().getDuration().toSeconds());
+                    timeLabel.setText(String.format("%02d:%02d", (int) ((this.player.getCurrentTime().toSeconds() % 3600) / 60), (int) ((this.player.getCurrentTime().toSeconds() % 60))) + "/" + String.format("%02d:%02d", (int) ((this.player.getMedia().getDuration().toSeconds() % 3600) / 60), (int) ((this.player.getMedia().getDuration().toSeconds() % 60))));
+                }
             }
 
         });
