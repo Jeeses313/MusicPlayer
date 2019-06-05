@@ -12,22 +12,18 @@ public class SongList {
 
     private HashMap<String, String> list;
     private ArrayList<String> names;
-    
 
     public SongList() {
         this.list = new HashMap<>();
     }
 
     public boolean init(String path) {
-        
         if (path.equals("")) {
             return false;
         }
-
         try {
-
             File musicDir = new File(path);
-            if (!musicDir.exists()) {
+            if (!musicDir.exists() || !musicDir.isDirectory()) {
                 return false;
             }
             File[] musicFiles = musicDir.listFiles();
@@ -44,11 +40,10 @@ public class SongList {
     }
 
     private void initPart(File[] musicFiles) throws Exception {
-        
         for (File musicFile : musicFiles) {
             String name = musicFile.getName();
             if (!name.contains(".mp3") && !name.contains(".mp4") && !name.contains(".wav")) {
-                if(musicFile.isDirectory()) {
+                if (musicFile.isDirectory()) {
                     this.initPart(musicFile.listFiles());
                 }
                 continue;
@@ -88,7 +83,7 @@ public class SongList {
 
     public String getRandomSong(String currentSong) {
         String newSong = this.names.get(new Random().nextInt(this.names.size()));
-        if(newSong.equals(currentSong)) {
+        if (newSong.equals(currentSong)) {
             return this.getNext(newSong);
         }
         return newSong;
@@ -97,11 +92,11 @@ public class SongList {
     public Media getSong(String name) {
         return new Media(this.list.get(name));
     }
-    
+
     public void shuffle() {
         Collections.shuffle(names);
     }
-    
+
     public void unshuffle() {
         this.names.sort((name1, name2) -> name1.toLowerCase().compareTo(name2.toLowerCase()));
     }
