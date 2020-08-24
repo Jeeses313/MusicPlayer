@@ -2,13 +2,15 @@ package musicplayer;
 
 import com.sun.glass.ui.Screen;
 import java.io.File;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import java.util.prefs.Preferences;
 import javafx.application.Application;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
-import javafx.geometry.Insets;
+import javafx.event.EventHandler;
 import javafx.scene.Scene;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
@@ -18,17 +20,16 @@ import javafx.scene.control.RadioButton;
 import javafx.scene.control.Slider;
 import javafx.scene.control.ToggleGroup;
 import javafx.scene.control.Tooltip;
+import javafx.scene.input.KeyCode;
 import javafx.scene.input.MouseButton;
-import javafx.scene.layout.Background;
-import javafx.scene.layout.BackgroundFill;
-import javafx.scene.layout.CornerRadii;
+import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.Pane;
 import javafx.scene.media.MediaPlayer;
-import javafx.scene.paint.Color;
 import javafx.scene.shape.Polygon;
 import javafx.scene.shape.Rectangle;
 import javafx.stage.DirectoryChooser;
 import javafx.stage.Stage;
+import org.jnativehook.GlobalScreen;
 
 public class MusicPlayer extends Application {
 
@@ -49,6 +50,7 @@ public class MusicPlayer extends Application {
     private boolean works;
     private double muteVolume;
     private boolean shuffled;
+    private GlobalKeyListener globalKeyListener;
 
     public static void main(String[] args) {
         launch(MusicPlayer.class);
@@ -60,7 +62,7 @@ public class MusicPlayer extends Application {
         Scene scene = new Scene(pan, 475, 235);
         this.list = new SongList();
 
-        works = this.list.init(Preferences.userRoot().get("path", ""));
+        works = this.list.init(Preferences.userRoot().get("MusicPlayerPath", ""));
 
         primaryStage.setScene(scene);
 
@@ -72,7 +74,7 @@ public class MusicPlayer extends Application {
             this.nextSong = "";
         }
 
-        this.volume = Preferences.userRoot().getDouble("Vol", 0.4);
+        this.volume = Preferences.userRoot().getDouble("MusicPlayerVolume", 0.4);
         this.muteVolume = this.volume;
         this.speed = 1;
         this.balance = 0.0;
@@ -83,7 +85,7 @@ public class MusicPlayer extends Application {
             this.player = newPlayer();
         }
 
-        currentSongLabel = createLabel(205, 0, "Playing now: " + currentSong);
+        currentSongLabel = ComponentCreator.createLabel(205, 0, "Playing now: " + currentSong);
         currentSongLabel.setTooltip(new Tooltip(currentSong));
         currentSongLabel.textProperty().addListener(new ChangeListener<String>() {
             @Override
@@ -92,7 +94,7 @@ public class MusicPlayer extends Application {
             }
         });
 
-        nextSongLabel = createLabel(205, 20, "Playing next: " + nextSong);
+        nextSongLabel = ComponentCreator.createLabel(205, 20, "Playing next: " + nextSong);
         nextSongLabel.setTooltip(new Tooltip(nextSong));
         nextSongLabel.textProperty().addListener(new ChangeListener<String>() {
             @Override
@@ -110,66 +112,67 @@ public class MusicPlayer extends Application {
         listView.setPrefSize(200, 220);
         listView.styleProperty().setValue("-fx-selection-bar: D3D3D3; -fx-focus-color: grey; -fx-faint-focus-color: transparent;");
 
-        Button chooseFolder = createButton(0, 220, 200, 20, "Choose folder");
+        Button chooseFolder = ComponentCreator.createButton(0, 220, 120, 20, "Choose folder");
+        Button settings = ComponentCreator.createButton(120, 220, 80, 20, "Hotkeys");
 
-        Button loop = createButton(385, 70, 100, 30, "Loop:all");
+        Button loop = ComponentCreator.createButton(385, 70, 100, 30, "Loop:all");
 
-        Button randomButton = createButton(385, 100, 100, 30, "Random:off");
+        Button randomButton = ComponentCreator.createButton(385, 100, 100, 30, "Random:off");
 
-        Button shuffleButton = createButton(385, 130, 100, 30, "Shuffle");
+        Button shuffleButton = ComponentCreator.createButton(385, 130, 100, 30, "Shuffle");
 
-        Label volumeLabel = createLabel(205, 160, "Volume:");
+        Label volumeLabel = ComponentCreator.createLabel(205, 160, "Volume:");
 
-        Slider volumeSlider = createSlider(0, 1, this.volume, 0.5, 260, 162, 200, 10);
+        Slider volumeSlider = ComponentCreator.createSlider(0, 1, this.volume, 0.5, 260, 162, 200, 10);
 
         if (works) {
-            timeLabel = createLabel(407, 40, String.format("%02d:%02d", (int) ((this.player.getCurrentTime().toSeconds() % 3600) / 60), (int) ((this.player.getCurrentTime().toSeconds() % 60))) + "/" + String.format("%02d:%02d", (int) ((this.player.getMedia().getDuration().toSeconds() % 3600) / 60), (int) ((this.player.getMedia().getDuration().toSeconds() % 60))));
+            timeLabel = ComponentCreator.createLabel(407, 40, String.format("%02d:%02d", (int) ((this.player.getCurrentTime().toSeconds() % 3600) / 60), (int) ((this.player.getCurrentTime().toSeconds() % 60))) + "/" + String.format("%02d:%02d", (int) ((this.player.getMedia().getDuration().toSeconds() % 3600) / 60), (int) ((this.player.getMedia().getDuration().toSeconds() % 60))));
         } else {
-            timeLabel = createLabel(407, 40, "00:00/00:00");
+            timeLabel = ComponentCreator.createLabel(407, 40, "00:00/00:00");
         }
 
-        timeBar = createProgressBar(205, 42, 200, 1);
+        timeBar = ComponentCreator.createProgressBar(205, 42, 200, 1);
 
-        Label speedLabel = createLabel(205, 200, "Speed:");
+        Label speedLabel = ComponentCreator.createLabel(205, 200, "Speed:");
 
-        Slider speedSlider = createSlider(0.25, 2, 1, 0.25, 260, 202, 200, 10);
+        Slider speedSlider = ComponentCreator.createSlider(0.25, 2, 1, 0.25, 260, 202, 200, 10);
         speedSlider.setSnapToTicks(true);
         speedSlider.setMinorTickCount(0);
 
-        Button play = createButton(205, 70, 90, 60, "");
+        Button play = ComponentCreator.createButton(205, 70, 90, 60, "");
         if (!works) {
             play.setDisable(true);
         }
-        Rectangle square1 = createRectangle(15, 5, 10, 40);
-        Rectangle square2 = createRectangle(45, 5, 10, 40);
+        Rectangle square1 = ComponentCreator.createRectangle(15, 5, 10, 40);
+        Rectangle square2 = ComponentCreator.createRectangle(45, 5, 10, 40);
         Pane pausePane = new Pane();
         pausePane.getChildren().addAll(square1, square2);
-        Polygon triangle = createTriangle(20, 25, 0, -20, 0, 20, 30, 0);
+        Polygon triangle = ComponentCreator.createTriangle(20, 25, 0, -20, 0, 20, 30, 0);
         Pane playPane = new Pane();
         playPane.getChildren().add(triangle);
         play.setGraphic(playPane);
 
-        Button playNext = createButton(295, 70, 90, 60, "");
+        Button playNext = ComponentCreator.createButton(295, 70, 90, 60, "");
         if (!works) {
             playNext.setDisable(true);
         }
-        Rectangle square3 = createRectangle(45, 5, 10, 40);
-        Polygon triangle2 = createTriangle(15, 25, 0, -20, 0, 20, 30, 0);
+        Rectangle square3 = ComponentCreator.createRectangle(45, 5, 10, 40);
+        Polygon triangle2 = ComponentCreator.createTriangle(15, 25, 0, -20, 0, 20, 30, 0);
         Pane playNextPane = new Pane();
         playNextPane.getChildren().addAll(square3, triangle2);
         playNext.setGraphic(playNextPane);
 
-        RadioButton left = createRadioButton(205, 130, 25, 30, "L");
+        RadioButton left = ComponentCreator.createRadioButton(205, 130, 25, 30, "L");
 
-        RadioButton middle = createRadioButton(231, 130, 36, 30, "M");
+        RadioButton middle = ComponentCreator.createRadioButton(231, 130, 36, 30, "M");
 
-        RadioButton right = createRadioButton(266, 130, 25, 30, "R");
+        RadioButton right = ComponentCreator.createRadioButton(266, 130, 25, 30, "R");
 
         ToggleGroup lmr = new ToggleGroup();
         lmr.getToggles().addAll(left, middle, right);
         middle.fire();
 
-        Button mute = createButton(295, 130, 90, 30, "Mute");
+        Button mute = ComponentCreator.createButton(295, 130, 90, 30, "Mute");
 
         listView.setOnMouseClicked(ev -> {
             if (works) {
@@ -377,7 +380,7 @@ public class MusicPlayer extends Application {
                 String path = folder.getPath();
                 SongList newList = new SongList();
                 if (newList.init(path)) {
-                    Preferences.userRoot().put("path", path);
+                    Preferences.userRoot().put("MusicPlayerPath", path);
                     if (works) {
                         this.player.stop();
                     }
@@ -404,19 +407,399 @@ public class MusicPlayer extends Application {
                 volumeSlider.setValue(0);
             }
         });
-        primaryStage.setOnCloseRequest(e -> {
-            Preferences.userRoot().putDouble("x", primaryStage.getX());
-            Preferences.userRoot().putDouble("y", primaryStage.getY());
-            Preferences.userRoot().putDouble("Vol", volume);
+        primaryStage.setOnCloseRequest(ev -> {
+            Preferences.userRoot().putDouble("MusicPlayerScreenX", primaryStage.getX());
+            Preferences.userRoot().putDouble("MusicPlayerScreenY", primaryStage.getY());
+            Preferences.userRoot().putDouble("MusicPlayerVolume", volume);
+            try {
+                GlobalScreen.unregisterNativeHook();
+            } catch (Exception ex) {
+            }
+
         });
-        double y = Preferences.userRoot().getDouble("y", -1);
-        double x = Preferences.userRoot().getDouble("x", -1);
+        double y = Preferences.userRoot().getDouble("MusicPlayerScreenY", -1);
+        double x = Preferences.userRoot().getDouble("MusicPlayerScreenX", -1);
         if (x >= 0 && y >= 0 && x < Screen.getMainScreen().getWidth() && y < Screen.getMainScreen().getHeight()) {
             primaryStage.setX(x);
             primaryStage.setY(y);
         }
+
+        Logger logger = Logger.getLogger(GlobalScreen.class.getPackage().getName());
+        logger.setLevel(Level.WARNING);
+        logger.setUseParentHandlers(false);
+        GlobalScreen.registerNativeHook();
+        globalKeyListener = new GlobalKeyListener(play, playNext, mute, randomButton, loop, shuffleButton, Preferences.userRoot().get("MusicPlayerPlay1", "56-29-25"), Preferences.userRoot().get("MusicPlayerPlay2", "-1"), Preferences.userRoot().get("MusicPlayerPlayNext1", "56-29-49"), Preferences.userRoot().get("MusicPlayerPlayNext2", "-1"), Preferences.userRoot().get("MusicPlayerMute1", "56-29-50"), Preferences.userRoot().get("MusicPlayerMute2", "-1"), Preferences.userRoot().get("MusicPlayerRandom1", "56-29-19"), Preferences.userRoot().get("MusicPlayerRandom2", "-1"), Preferences.userRoot().get("MusicPlayerLoop1", "56-29-38"), Preferences.userRoot().get("MusicPlayerLoop2", "-1"), Preferences.userRoot().get("MusicPlayerShuffle1", "56-29-31"), Preferences.userRoot().get("MusicPlayerShuffle2", "-1"));
+        GlobalScreen.addNativeKeyListener(globalKeyListener);
+
+        settings.setOnAction(e -> {
+            Stage settingsStage = new Stage();
+            settingsStage.setResizable(false);
+            settingsStage.setWidth(300);
+            settingsStage.setHeight(250);
+            Pane settingsPane = new Pane();
+            Scene settingsScene = new Scene(settingsPane, 300, 250);
+
+            Label playSetting = ComponentCreator.createLabel(10, 10, "Play");
+            Button play1Setting = ComponentCreator.createButton(80, 5, 100, 30, globalKeyListener.getKeyCombinationAsText(globalKeyListener.getPlay1Key()));
+            Button play2Setting = ComponentCreator.createButton(180, 5, 100, 30, globalKeyListener.getKeyCombinationAsText(globalKeyListener.getPlay2Key()));
+
+            Label playNextSetting = ComponentCreator.createLabel(10, 40, "Play next");
+            Button playNext1Setting = ComponentCreator.createButton(80, 35, 100, 30, globalKeyListener.getKeyCombinationAsText(globalKeyListener.getPlayNext1Key()));
+            Button playNext2Setting = ComponentCreator.createButton(180, 35, 100, 30, globalKeyListener.getKeyCombinationAsText(globalKeyListener.getPlayNext2Key()));
+
+            Label muteSetting = ComponentCreator.createLabel(10, 70, "Mute");
+            Button mute1Setting = ComponentCreator.createButton(80, 65, 100, 30, globalKeyListener.getKeyCombinationAsText(globalKeyListener.getMute1Key()));
+            Button mute2Setting = ComponentCreator.createButton(180, 65, 100, 30, globalKeyListener.getKeyCombinationAsText(globalKeyListener.getMute2Key()));
+
+            Label randomSetting = ComponentCreator.createLabel(10, 100, "Random");
+            Button random1Setting = ComponentCreator.createButton(80, 95, 100, 30, globalKeyListener.getKeyCombinationAsText(globalKeyListener.getRandom1Key()));
+            Button random2Setting = ComponentCreator.createButton(180, 95, 100, 30, globalKeyListener.getKeyCombinationAsText(globalKeyListener.getRandom2Key()));
+
+            Label loopSetting = ComponentCreator.createLabel(10, 130, "Loop");
+            Button loop1Setting = ComponentCreator.createButton(80, 125, 100, 30, globalKeyListener.getKeyCombinationAsText(globalKeyListener.getLoop1Key()));
+            Button loop2Setting = ComponentCreator.createButton(180, 125, 100, 30, globalKeyListener.getKeyCombinationAsText(globalKeyListener.getLoop2Key()));
+
+            Label shuffleSetting = ComponentCreator.createLabel(10, 160, "Shuffle");
+            Button shuffle1Setting = ComponentCreator.createButton(80, 155, 100, 30, globalKeyListener.getKeyCombinationAsText(globalKeyListener.getShuffle1Key()));
+            Button shuffle2Setting = ComponentCreator.createButton(180, 155, 100, 30, globalKeyListener.getKeyCombinationAsText(globalKeyListener.getShuffle2Key()));
+
+            play1Setting.setOnMouseClicked(ev -> {
+                if (ev.getButton() == MouseButton.PRIMARY) {
+                    play1Setting.setText("");
+                    settingsScene.setOnKeyPressed(key -> {
+                        if (key.getCode() != KeyCode.CONTROL && key.getCode() != KeyCode.ALT && key.getCode() != KeyCode.ALT_GRAPH && key.getCode() != KeyCode.CAPS && key.getCode() != KeyCode.SHIFT) {
+                            String lastKey = globalKeyListener.getLastKeyCombination();
+                            globalKeyListener.setPlay1Key(lastKey);
+                            Preferences.userRoot().put("MusicPlayerPlay1", lastKey);
+                            play1Setting.setText(globalKeyListener.getKeyCombinationAsText(lastKey));
+                            settingsScene.setOnKeyPressed(k -> {
+                            });
+                        }
+                    });
+                } else if (ev.getButton() == MouseButton.SECONDARY) {
+                    String lastKey = "-1";
+                    globalKeyListener.setPlay1Key(lastKey);
+                    Preferences.userRoot().put("MusicPlayerPlay1", lastKey);
+                    play1Setting.setText(globalKeyListener.getKeyCombinationAsText(lastKey));
+                }
+
+            });
+
+            play2Setting.setOnMouseClicked(ev -> {
+                if (ev.getButton() == MouseButton.PRIMARY) {
+                    play2Setting.setText("");
+                    settingsScene.setOnKeyPressed(key -> {
+                        if (key.getCode() != KeyCode.CONTROL && key.getCode() != KeyCode.ALT && key.getCode() != KeyCode.ALT_GRAPH && key.getCode() != KeyCode.CAPS && key.getCode() != KeyCode.SHIFT) {
+                            String lastKey = globalKeyListener.getLastKeyCombination();
+                            globalKeyListener.setPlay2Key(lastKey);
+                            Preferences.userRoot().put("MusicPlayerPlay2", lastKey);
+                            play2Setting.setText(globalKeyListener.getKeyCombinationAsText(lastKey));
+                            settingsScene.setOnKeyPressed(k -> {
+                            });
+                        }
+                    });
+                } else if (ev.getButton() == MouseButton.SECONDARY) {
+                    String lastKey = "-1";
+                    globalKeyListener.setPlay2Key(lastKey);
+                    Preferences.userRoot().put("MusicPlayerPlay2", lastKey);
+                    play2Setting.setText(globalKeyListener.getKeyCombinationAsText(lastKey));
+                }
+
+            });
+
+            playNext1Setting.setOnMouseClicked(ev -> {
+                if (ev.getButton() == MouseButton.PRIMARY) {
+                    playNext1Setting.setText("");
+                    settingsScene.setOnKeyPressed(key -> {
+                        if (key.getCode() != KeyCode.CONTROL && key.getCode() != KeyCode.ALT && key.getCode() != KeyCode.ALT_GRAPH && key.getCode() != KeyCode.CAPS && key.getCode() != KeyCode.SHIFT) {
+                            String lastKey = globalKeyListener.getLastKeyCombination();
+                            globalKeyListener.setPlayNext1Key(lastKey);
+                            Preferences.userRoot().put("MusicPlayerPlayNext1", lastKey);
+                            playNext1Setting.setText(globalKeyListener.getKeyCombinationAsText(lastKey));
+                            settingsScene.setOnKeyPressed(k -> {
+                            });
+                        }
+                    });
+                } else if (ev.getButton() == MouseButton.SECONDARY) {
+                    String lastKey = "-1";
+                    globalKeyListener.setPlayNext1Key(lastKey);
+                    Preferences.userRoot().put("MusicPlayerPlayNext1", lastKey);
+                    playNext1Setting.setText(globalKeyListener.getKeyCombinationAsText(lastKey));
+                }
+
+            });
+
+            playNext2Setting.setOnMouseClicked(ev -> {
+                if (ev.getButton() == MouseButton.PRIMARY) {
+                    playNext2Setting.setText("");
+                    settingsScene.setOnKeyPressed(key -> {
+                        if (key.getCode() != KeyCode.CONTROL && key.getCode() != KeyCode.ALT && key.getCode() != KeyCode.ALT_GRAPH && key.getCode() != KeyCode.CAPS && key.getCode() != KeyCode.SHIFT) {
+                            String lastKey = globalKeyListener.getLastKeyCombination();
+                            globalKeyListener.setPlayNext2Key(lastKey);
+                            Preferences.userRoot().put("MusicPlayerPlayNext2", lastKey);
+                            playNext2Setting.setText(globalKeyListener.getKeyCombinationAsText(lastKey));
+                            settingsScene.setOnKeyPressed(k -> {
+                            });
+                        }
+                    });
+                } else if (ev.getButton() == MouseButton.SECONDARY) {
+                    String lastKey = "-1";
+                    globalKeyListener.setPlayNext2Key(lastKey);
+                    Preferences.userRoot().put("MusicPlayerPlayNext2", lastKey);
+                    playNext2Setting.setText(globalKeyListener.getKeyCombinationAsText(lastKey));
+                }
+
+            });
+
+            mute1Setting.setOnMouseClicked(ev -> {
+                if (ev.getButton() == MouseButton.PRIMARY) {
+                    mute1Setting.setText("");
+                    settingsScene.setOnKeyPressed(key -> {
+                        if (key.getCode() != KeyCode.CONTROL && key.getCode() != KeyCode.ALT && key.getCode() != KeyCode.ALT_GRAPH && key.getCode() != KeyCode.CAPS && key.getCode() != KeyCode.SHIFT) {
+                            String lastKey = globalKeyListener.getLastKeyCombination();
+                            globalKeyListener.setMute1Key(lastKey);
+                            Preferences.userRoot().put("MusicPlayerMute1", lastKey);
+                            mute1Setting.setText(globalKeyListener.getKeyCombinationAsText(lastKey));
+                            settingsScene.setOnKeyPressed(k -> {
+                            });
+                        }
+                    });
+                } else if (ev.getButton() == MouseButton.SECONDARY) {
+                    String lastKey = "-1";
+                    globalKeyListener.setMute1Key(lastKey);
+                    Preferences.userRoot().put("MusicPlayerMute1", lastKey);
+                    mute1Setting.setText(globalKeyListener.getKeyCombinationAsText(lastKey));
+                }
+
+            });
+
+            mute2Setting.setOnMouseClicked(ev -> {
+                if (ev.getButton() == MouseButton.PRIMARY) {
+                    mute2Setting.setText("");
+                    settingsScene.setOnKeyPressed(key -> {
+                        if (key.getCode() != KeyCode.CONTROL && key.getCode() != KeyCode.ALT && key.getCode() != KeyCode.ALT_GRAPH && key.getCode() != KeyCode.CAPS && key.getCode() != KeyCode.SHIFT) {
+                            String lastKey = globalKeyListener.getLastKeyCombination();
+                            globalKeyListener.setMute2Key(lastKey);
+                            Preferences.userRoot().put("MusicPlayerMute2", lastKey);
+                            mute2Setting.setText(globalKeyListener.getKeyCombinationAsText(lastKey));
+                            settingsScene.setOnKeyPressed(k -> {
+                            });
+                        }
+                    });
+                } else if (ev.getButton() == MouseButton.SECONDARY) {
+                    String lastKey = "-1";
+                    globalKeyListener.setMute2Key(lastKey);
+                    Preferences.userRoot().put("MusicPlayerMute2", lastKey);
+                    mute2Setting.setText(globalKeyListener.getKeyCombinationAsText(lastKey));
+                }
+
+            });
+
+            random1Setting.setOnMouseClicked(ev -> {
+                if (ev.getButton() == MouseButton.PRIMARY) {
+                    random1Setting.setText("");
+                    settingsScene.setOnKeyPressed(key -> {
+                        if (key.getCode() != KeyCode.CONTROL && key.getCode() != KeyCode.ALT && key.getCode() != KeyCode.ALT_GRAPH && key.getCode() != KeyCode.CAPS && key.getCode() != KeyCode.SHIFT) {
+                            String lastKey = globalKeyListener.getLastKeyCombination();
+                            globalKeyListener.setRandom1Key(lastKey);
+                            Preferences.userRoot().put("MusicPlayerRandom1", lastKey);
+                            random1Setting.setText(globalKeyListener.getKeyCombinationAsText(lastKey));
+                            settingsScene.setOnKeyPressed(k -> {
+                            });
+                        }
+                    });
+                } else if (ev.getButton() == MouseButton.SECONDARY) {
+                    String lastKey = "-1";
+                    globalKeyListener.setRandom1Key(lastKey);
+                    Preferences.userRoot().put("MusicPlayerRandom1", lastKey);
+                    random1Setting.setText(globalKeyListener.getKeyCombinationAsText(lastKey));
+                }
+
+            });
+
+            random2Setting.setOnMouseClicked(ev -> {
+                if (ev.getButton() == MouseButton.PRIMARY) {
+                    random2Setting.setText("");
+                    settingsScene.setOnKeyPressed(key -> {
+                        if (key.getCode() != KeyCode.CONTROL && key.getCode() != KeyCode.ALT && key.getCode() != KeyCode.ALT_GRAPH && key.getCode() != KeyCode.CAPS && key.getCode() != KeyCode.SHIFT) {
+                            String lastKey = globalKeyListener.getLastKeyCombination();
+                            globalKeyListener.setRandom2Key(lastKey);
+                            Preferences.userRoot().put("MusicPlayerRandom2", lastKey);
+                            random2Setting.setText(globalKeyListener.getKeyCombinationAsText(lastKey));
+                            settingsScene.setOnKeyPressed(k -> {
+                            });
+                        }
+                    });
+                } else if (ev.getButton() == MouseButton.SECONDARY) {
+                    String lastKey = "-1";
+                    globalKeyListener.setRandom2Key(lastKey);
+                    Preferences.userRoot().put("MusicPlayerRandom2", lastKey);
+                    random2Setting.setText(globalKeyListener.getKeyCombinationAsText(lastKey));
+                }
+
+            });
+
+            loop1Setting.setOnMouseClicked(ev -> {
+                if (ev.getButton() == MouseButton.PRIMARY) {
+                    loop1Setting.setText("");
+                    settingsScene.setOnKeyPressed(key -> {
+                        if (key.getCode() != KeyCode.CONTROL && key.getCode() != KeyCode.ALT && key.getCode() != KeyCode.ALT_GRAPH && key.getCode() != KeyCode.CAPS && key.getCode() != KeyCode.SHIFT) {
+                            String lastKey = globalKeyListener.getLastKeyCombination();
+                            globalKeyListener.setLoop1Key(lastKey);
+                            Preferences.userRoot().put("MusicPlayerLoop1", lastKey);
+                            loop1Setting.setText(globalKeyListener.getKeyCombinationAsText(lastKey));
+                            settingsScene.setOnKeyPressed(k -> {
+                            });
+                        }
+                    });
+                } else if (ev.getButton() == MouseButton.SECONDARY) {
+                    String lastKey = "-1";
+                    globalKeyListener.setLoop1Key(lastKey);
+                    Preferences.userRoot().put("MusicPlayerLoop1", lastKey);
+                    loop1Setting.setText(globalKeyListener.getKeyCombinationAsText(lastKey));
+                }
+
+            });
+
+            loop2Setting.setOnMouseClicked(ev -> {
+                if (ev.getButton() == MouseButton.PRIMARY) {
+                    loop2Setting.setText("");
+                    settingsScene.setOnKeyPressed(key -> {
+                        if (key.getCode() != KeyCode.CONTROL && key.getCode() != KeyCode.ALT && key.getCode() != KeyCode.ALT_GRAPH && key.getCode() != KeyCode.CAPS && key.getCode() != KeyCode.SHIFT) {
+                            String lastKey = globalKeyListener.getLastKeyCombination();
+                            globalKeyListener.setLoop2Key(lastKey);
+                            Preferences.userRoot().put("MusicPlayerLoop2", lastKey);
+                            loop2Setting.setText(globalKeyListener.getKeyCombinationAsText(lastKey));
+                            settingsScene.setOnKeyPressed(k -> {
+                            });
+                        }
+                    });
+                } else if (ev.getButton() == MouseButton.SECONDARY) {
+                    String lastKey = "-1";
+                    globalKeyListener.setLoop2Key(lastKey);
+                    Preferences.userRoot().put("MusicPlayerLoop2", lastKey);
+                    loop2Setting.setText(globalKeyListener.getKeyCombinationAsText(lastKey));
+                }
+
+            });
+
+            shuffle1Setting.setOnMouseClicked(ev -> {
+                if (ev.getButton() == MouseButton.PRIMARY) {
+                    shuffle1Setting.setText("");
+                    settingsScene.setOnKeyPressed(key -> {
+                        if (key.getCode() != KeyCode.CONTROL && key.getCode() != KeyCode.ALT && key.getCode() != KeyCode.ALT_GRAPH && key.getCode() != KeyCode.CAPS && key.getCode() != KeyCode.SHIFT) {
+                            String lastKey = globalKeyListener.getLastKeyCombination();
+                            globalKeyListener.setShuffle1Key(lastKey);
+                            Preferences.userRoot().put("MusicPlayerShuffle1", lastKey);
+                            shuffle1Setting.setText(globalKeyListener.getKeyCombinationAsText(lastKey));
+                            settingsScene.setOnKeyPressed(k -> {
+                            });
+                        }
+                    });
+                } else if (ev.getButton() == MouseButton.SECONDARY) {
+                    String lastKey = "-1";
+                    globalKeyListener.setShuffle1Key(lastKey);
+                    Preferences.userRoot().put("MusicPlayerShuffle1", lastKey);
+                    shuffle1Setting.setText(globalKeyListener.getKeyCombinationAsText(lastKey));
+                }
+
+            });
+
+            shuffle2Setting.setOnMouseClicked(ev -> {
+                if (ev.getButton() == MouseButton.PRIMARY) {
+                    shuffle2Setting.setText("");
+                    settingsScene.setOnKeyPressed(key -> {
+                        if (key.getCode() != KeyCode.CONTROL && key.getCode() != KeyCode.ALT && key.getCode() != KeyCode.ALT_GRAPH && key.getCode() != KeyCode.CAPS && key.getCode() != KeyCode.SHIFT) {
+                            String lastKey = globalKeyListener.getLastKeyCombination();
+                            globalKeyListener.setShuffle2Key(lastKey);
+                            Preferences.userRoot().put("MusicPlayerShuffle2", lastKey);
+                            shuffle2Setting.setText(globalKeyListener.getKeyCombinationAsText(lastKey));
+                            settingsScene.setOnKeyPressed(k -> {
+                            });
+                        }
+                    });
+                } else if (ev.getButton() == MouseButton.SECONDARY) {
+                    String lastKey = "-1";
+                    globalKeyListener.setShuffle2Key(lastKey);
+                    Preferences.userRoot().put("MusicPlayerShuffle2", lastKey);
+                    shuffle2Setting.setText(globalKeyListener.getKeyCombinationAsText(lastKey));
+                }
+
+            });
+
+            settingsScene.addEventFilter(MouseEvent.MOUSE_PRESSED, new EventHandler<MouseEvent>() {
+                @Override
+                public void handle(MouseEvent mouseEvent) {
+                    if (play1Setting.getText().equals("")) {
+                        play1Setting.setText(globalKeyListener.getKeyCombinationAsText(globalKeyListener.getPlay1Key()));
+                        settingsScene.setOnKeyPressed(k -> {
+                        });
+                    }
+                    if (play2Setting.getText().equals("")) {
+                        play2Setting.setText(globalKeyListener.getKeyCombinationAsText(globalKeyListener.getPlay2Key()));
+                        settingsScene.setOnKeyPressed(k -> {
+                        });
+                    }
+                    if (playNext1Setting.getText().equals("")) {
+                        playNext1Setting.setText(globalKeyListener.getKeyCombinationAsText(globalKeyListener.getPlayNext1Key()));
+                        settingsScene.setOnKeyPressed(k -> {
+                        });
+                    }
+                    if (playNext2Setting.getText().equals("")) {
+                        playNext2Setting.setText(globalKeyListener.getKeyCombinationAsText(globalKeyListener.getPlayNext2Key()));
+                        settingsScene.setOnKeyPressed(k -> {
+                        });
+                    }
+                    if (mute1Setting.getText().equals("")) {
+                        mute1Setting.setText(globalKeyListener.getKeyCombinationAsText(globalKeyListener.getMute1Key()));
+                        settingsScene.setOnKeyPressed(k -> {
+                        });
+                    }
+                    if (mute2Setting.getText().equals("")) {
+                        mute2Setting.setText(globalKeyListener.getKeyCombinationAsText(globalKeyListener.getMute2Key()));
+                        settingsScene.setOnKeyPressed(k -> {
+                        });
+                    }
+                    if (random1Setting.getText().equals("")) {
+                        random1Setting.setText(globalKeyListener.getKeyCombinationAsText(globalKeyListener.getRandom1Key()));
+                        settingsScene.setOnKeyPressed(k -> {
+                        });
+                    }
+                    if (random2Setting.getText().equals("")) {
+                        random2Setting.setText(globalKeyListener.getKeyCombinationAsText(globalKeyListener.getRandom2Key()));
+                        settingsScene.setOnKeyPressed(k -> {
+                        });
+                    }
+                    if (loop1Setting.getText().equals("")) {
+                        loop1Setting.setText(globalKeyListener.getKeyCombinationAsText(globalKeyListener.getLoop1Key()));
+                        settingsScene.setOnKeyPressed(k -> {
+                        });
+                    }
+                    if (loop2Setting.getText().equals("")) {
+                        loop2Setting.setText(globalKeyListener.getKeyCombinationAsText(globalKeyListener.getLoop2Key()));
+                        settingsScene.setOnKeyPressed(k -> {
+                        });
+                    }
+                    if (shuffle1Setting.getText().equals("")) {
+                        shuffle1Setting.setText(globalKeyListener.getKeyCombinationAsText(globalKeyListener.getShuffle1Key()));
+                        settingsScene.setOnKeyPressed(k -> {
+                        });
+                    }
+                    if (shuffle2Setting.getText().equals("")) {
+                        shuffle2Setting.setText(globalKeyListener.getKeyCombinationAsText(globalKeyListener.getShuffle2Key()));
+                        settingsScene.setOnKeyPressed(k -> {
+                        });
+                    }
+                }
+            });
+
+            settingsPane.getChildren().addAll(playSetting, play1Setting, play2Setting, playNextSetting, playNext1Setting, playNext2Setting, muteSetting, mute1Setting, mute2Setting, randomSetting, random1Setting, random2Setting, loopSetting, loop1Setting, loop2Setting, shuffleSetting, shuffle1Setting, shuffle2Setting);
+            settingsStage.setTitle("MusicPlayer hotkeys");
+            settingsStage.setScene(settingsScene);
+            settingsStage.show();
+        });
         primaryStage.setResizable(false);
-        pan.getChildren().addAll(play, listView, currentSongLabel, nextSongLabel, randomButton, loop, playNext, left, middle, right, volumeLabel, speedLabel, volumeSlider, speedSlider, timeBar, timeLabel, chooseFolder, mute, shuffleButton);
+        pan.getChildren().addAll(play, listView, currentSongLabel, nextSongLabel, settings, randomButton, loop, playNext, left, middle, right, volumeLabel, speedLabel, volumeSlider, speedSlider, timeBar, timeLabel, chooseFolder, mute, shuffleButton);
         primaryStage.setTitle("MusicPlayer");
         primaryStage.show();
 
@@ -451,67 +834,5 @@ public class MusicPlayer extends Application {
 
         });
         return newPlayer;
-    }
-
-    private Label createLabel(int x, int y, String text) {
-        Label newLabel = new Label(text);
-        newLabel.setTranslateX(x);
-        newLabel.setTranslateY(y);
-        return newLabel;
-    }
-
-    private Button createButton(int x, int y, int width, int height, String text) {
-        Button newButton = new Button(text);
-        newButton.setTranslateX(x);
-        newButton.setTranslateY(y);
-        newButton.setPrefSize(width, height);
-        newButton.styleProperty().setValue("-fx-focus-color: grey; -fx-faint-focus-color: transparent;");
-        return newButton;
-    }
-
-    private RadioButton createRadioButton(int x, int y, int width, int height, String text) {
-        RadioButton newButton = new RadioButton(text);
-        newButton.setTranslateX(x);
-        newButton.setTranslateY(y);
-        newButton.getStyleClass().remove("radio-button");
-        newButton.getStyleClass().add("toggle-button");
-        newButton.setPrefSize(width, height);
-        newButton.styleProperty().setValue("-fx-focus-color: grey; -fx-faint-focus-color: transparent;");
-        return newButton;
-    }
-
-    private Rectangle createRectangle(int x, int y, int width, int height) {
-        Rectangle newRectangle = new Rectangle(width, height);
-        newRectangle.setTranslateX(x);
-        newRectangle.setTranslateY(y);
-        return newRectangle;
-    }
-
-    private Polygon createTriangle(int x, int y, int x1, int y1, int x2, int y2, int x3, int y3) {
-        Polygon newTriangle = new Polygon(x1, y1, x2, y2, x3, y3);
-        newTriangle.setTranslateX(x);
-        newTriangle.setTranslateY(y);
-        return newTriangle;
-    }
-
-    private Slider createSlider(double min, double max, double value, double major, int x, int y, int width, int height) {
-        Slider newSlider = new Slider(min, max, value);
-        newSlider.setTranslateX(x);
-        newSlider.setTranslateY(y);
-        newSlider.setPrefSize(width, height);
-        newSlider.setMajorTickUnit(major);
-        newSlider.setShowTickLabels(true);
-        newSlider.setShowTickMarks(true);
-        newSlider.styleProperty().setValue("-fx-focus-color: grey; -fx-faint-focus-color: transparent;");
-        return newSlider;
-    }
-
-    private ProgressBar createProgressBar(int x, int y, int width, int height) {
-        ProgressBar newProgressBar = new ProgressBar(0);
-        newProgressBar.setTranslateX(x);
-        newProgressBar.setTranslateY(y);
-        newProgressBar.setPrefSize(width, height);
-        newProgressBar.setStyle("-fx-accent: #A9A9A9;");
-        return newProgressBar;
     }
 }

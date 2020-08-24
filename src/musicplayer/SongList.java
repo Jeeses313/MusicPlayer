@@ -15,6 +15,7 @@ public class SongList {
 
     public SongList() {
         this.list = new HashMap<>();
+        this.names = new ArrayList<>();
     }
 
     public boolean init(String path) {
