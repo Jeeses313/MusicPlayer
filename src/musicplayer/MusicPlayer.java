@@ -51,6 +51,8 @@ public class MusicPlayer extends Application {
     private double muteVolume;
     private boolean shuffled;
     private GlobalKeyListener globalKeyListener;
+    private boolean songSelect;
+    private String currentFolder;
 
     public static void main(String[] args) {
         launch(MusicPlayer.class);
@@ -67,8 +69,9 @@ public class MusicPlayer extends Application {
         primaryStage.setScene(scene);
 
         if (works) {
-            this.currentSong = this.list.getSongName(0);
-            this.nextSong = this.list.getNext(this.currentSong);
+            this.currentFolder = "All";
+            this.currentSong = this.list.getSongName(0, this.currentFolder);
+            this.nextSong = this.list.getNext(this.currentSong, this.currentFolder);
         } else {
             this.currentSong = "";
             this.nextSong = "";
@@ -84,6 +87,7 @@ public class MusicPlayer extends Application {
         if (works) {
             this.player = newPlayer();
         }
+        this.songSelect = true;
 
         currentSongLabel = ComponentCreator.createLabel(205, 0, "Playing now: " + currentSong);
         currentSongLabel.setTooltip(new Tooltip(currentSong));
@@ -105,15 +109,18 @@ public class MusicPlayer extends Application {
 
         ObservableList<String> data = FXCollections.observableArrayList();
         if (works) {
-            data.addAll(this.list.getNames());
+            data.addAll(this.list.getFolderContents(this.currentFolder));
         }
         listView = new ListView<>(data);
         listView.getSelectionModel().select(0);
         listView.setPrefSize(200, 220);
         listView.styleProperty().setValue("-fx-selection-bar: D3D3D3; -fx-focus-color: grey; -fx-faint-focus-color: transparent;");
 
-        Button chooseFolder = ComponentCreator.createButton(0, 220, 120, 20, "Choose folder");
-        Button settings = ComponentCreator.createButton(120, 220, 80, 20, "Hotkeys");
+        Button scanButton = ComponentCreator.createButton(0, 220, 55, 20, "Scan");
+        
+        Button foldersButton = ComponentCreator.createButton(55, 220, 70, 20, "Folders");
+        
+        Button settingsButton = ComponentCreator.createButton(125, 220, 75, 20, "Hotkeys");
 
         Button loop = ComponentCreator.createButton(385, 70, 100, 30, "Loop:all");
 
@@ -176,24 +183,63 @@ public class MusicPlayer extends Application {
 
         listView.setOnMouseClicked(ev -> {
             if (works) {
-                if (ev.getButton() == MouseButton.PRIMARY) {
-                    play.setGraphic(pausePane);
-                    this.player.stop();
-                    this.currentSong = listView.getSelectionModel().getSelectedItem();
-                    currentSongLabel.setText("Playing now: " + currentSong);
-                    if (!this.random) {
-                        nextSong = this.list.getNext(this.currentSong);
-                    } else {
-                        nextSong = list.getRandomSong(currentSong);
+                if(songSelect) {
+                    if (ev.getButton() == MouseButton.PRIMARY) {
+                        play.setGraphic(pausePane);
+                        this.player.stop();
+                        this.currentSong = listView.getSelectionModel().getSelectedItem();
+                        currentSongLabel.setText("Playing now: " + currentSong);
+                        if (!this.random) {
+                            nextSong = this.list.getNext(this.currentSong, this.currentFolder);
+                        } else {
+                            nextSong = list.getRandomSong(currentSong, this.currentFolder);
+                        }
+                        nextSongLabel.setText("Playing next: " + nextSong);
+                        player.dispose();
+                        this.player = newPlayer();
+                        this.player.play();
+                    } else if (ev.getButton() == MouseButton.SECONDARY) {
+                        this.nextSong = listView.getSelectionModel().getSelectedItem();
+                        nextSongLabel.setText("Playing next: " + nextSong);
                     }
-                    nextSongLabel.setText("Playing next: " + nextSong);
-                    player.dispose();
-                    this.player = newPlayer();
-                    this.player.play();
-                } else if (ev.getButton() == MouseButton.SECONDARY) {
-                    this.nextSong = listView.getSelectionModel().getSelectedItem();
-                    nextSongLabel.setText("Playing next: " + nextSong);
                 }
+                else {
+                    String newFolder = listView.getSelectionModel().getSelectedItem();
+                    if(!newFolder.equals(this.currentFolder)) {
+                        boolean wasPlaying = false;
+                        if(player.getStatus() == MediaPlayer.Status.PLAYING) {
+                            this.player.stop();
+                            wasPlaying = true;
+                        }
+                        this.currentFolder = newFolder;
+                        data.clear();
+                        data.addAll(this.list.getFolderContents(this.currentFolder));
+                        if (!random) {
+                            this.currentSong = this.list.getSongName(0, this.currentFolder);
+                            this.nextSong = this.list.getNext(currentSong, this.currentFolder);
+                        } else {
+                            this.currentSong = this.list.getRandomSong("", this.currentFolder);
+                            this.nextSong = this.list.getRandomSong(currentSong, this.currentFolder);
+                        }
+                        currentSongLabel.setText("Playing now: " + currentSong);
+                        nextSongLabel.setText("Playing next: " + nextSong);
+                        this.player = newPlayer();
+                        this.songSelect = true;
+                        if(wasPlaying) {
+                            this.player.play();
+                            play.setGraphic(pausePane);
+                        } else {
+                            play.setGraphic(playPane);
+                        }
+                    } else {
+                        this.currentFolder = listView.getSelectionModel().getSelectedItem();
+                        data.clear();
+                        data.addAll(this.list.getFolderContents(this.currentFolder));
+                        listView.getSelectionModel().select(currentSong);
+                        listView.scrollTo(listView.getSelectionModel().getSelectedIndex());
+                        this.songSelect = true;
+                    }
+                } 
             }
         });
 
@@ -229,11 +275,11 @@ public class MusicPlayer extends Application {
                     this.random = false;
                     randomButton.setText("Random:off");
                     if (works) {
-                        nextSong = list.getNext(currentSong);
+                        nextSong = list.getNext(currentSong, this.currentFolder);
                     }
                 } else if (e.getButton() == MouseButton.SECONDARY) {
                     if (works) {
-                        nextSong = list.getRandomSong(currentSong);
+                        nextSong = list.getRandomSong(currentSong, this.currentFolder);
                     }
                 }
             } else {
@@ -241,7 +287,7 @@ public class MusicPlayer extends Application {
                     this.random = true;
                     randomButton.setText("Random:on");
                     if (works) {
-                        nextSong = list.getRandomSong(currentSong);
+                        nextSong = list.getRandomSong(currentSong, this.currentFolder);
                     }
                 }
             }
@@ -255,26 +301,30 @@ public class MusicPlayer extends Application {
                     shuffleButton.setText("Shuffle");
                     if (works) {
                         this.list.unshuffle();
-                        data.clear();
-                        data.addAll(this.list.getNames());
-                        this.listView.itemsProperty().set(data);
-                        listView.getSelectionModel().select(currentSong);
-                        listView.scrollTo(listView.getSelectionModel().getSelectedIndex());
+                        if(songSelect) {
+                            data.clear();
+                            data.addAll(this.list.getFolderContents(this.currentFolder));
+                            this.listView.itemsProperty().set(data);
+                            listView.getSelectionModel().select(currentSong);
+                            listView.scrollTo(listView.getSelectionModel().getSelectedIndex());
+                        }
                         if (!random) {
-                            nextSong = list.getNext(currentSong);
+                            nextSong = list.getNext(currentSong, this.currentFolder);
                         }
                         nextSongLabel.setText("Playing next: " + nextSong);
                     }
                 } else if (e.getButton() == MouseButton.SECONDARY) {
                     if (works) {
                         this.list.shuffle();
-                        data.clear();
-                        data.addAll(this.list.getNames());
-                        this.listView.itemsProperty().set(data);
-                        listView.getSelectionModel().select(currentSong);
-                        listView.scrollTo(listView.getSelectionModel().getSelectedIndex());
+                        if(songSelect) {
+                            data.clear();
+                            data.addAll(this.list.getFolderContents(this.currentFolder));
+                            this.listView.itemsProperty().set(data);
+                            listView.getSelectionModel().select(currentSong);
+                            listView.scrollTo(listView.getSelectionModel().getSelectedIndex());
+                        }                     
                         if (!random) {
-                            nextSong = list.getNext(currentSong);
+                            nextSong = list.getNext(currentSong, this.currentFolder);
                         }
                         nextSongLabel.setText("Playing next: " + nextSong);
                     }
@@ -285,13 +335,16 @@ public class MusicPlayer extends Application {
                     shuffleButton.setText("Unshuffle");
                     if (works) {
                         this.list.shuffle();
-                        data.clear();
-                        data.addAll(this.list.getNames());
-                        this.listView.itemsProperty().set(data);
-                        listView.getSelectionModel().select(currentSong);
-                        listView.scrollTo(listView.getSelectionModel().getSelectedIndex());
+                        if(songSelect) {
+                            data.clear();
+                            data.addAll(this.list.getFolderContents(this.currentFolder));
+                            this.listView.itemsProperty().set(data);
+                            listView.getSelectionModel().select(currentSong);
+                            listView.scrollTo(listView.getSelectionModel().getSelectedIndex());
+                        }
+                        
                         if (!random) {
-                            nextSong = list.getNext(currentSong);
+                            nextSong = list.getNext(currentSong, this.currentFolder);
                         }
                         nextSongLabel.setText("Playing next: " + nextSong);
                     }
@@ -304,9 +357,9 @@ public class MusicPlayer extends Application {
             currentSong = nextSong;
             currentSongLabel.setText("Playing now: " + currentSong);
             if (!random) {
-                nextSong = list.getNext(currentSong);
+                nextSong = list.getNext(currentSong, this.currentFolder);
             } else {
-                nextSong = list.getRandomSong(currentSong);
+                nextSong = list.getRandomSong(currentSong, this.currentFolder);
             }
             nextSongLabel.setText("Playing next: " + nextSong);
             listView.getSelectionModel().select(currentSong);
@@ -339,19 +392,19 @@ public class MusicPlayer extends Application {
         });
 
         volumeSlider.valueProperty().addListener((volChange, oldVol, newVol) -> {
-
             this.volume = volumeSlider.getValue();
             if (works) {
                 this.player.setVolume(volume);
             }
         });
+        
         speedSlider.valueProperty().addListener((volChange, oldVol, newVol) -> {
-
             this.speed = speedSlider.getValue();
             if (works) {
                 this.player.setRate(speed);
             }
         });
+        
         timeBar.setOnMouseClicked(ev -> {
             if (works) {
                 this.player.seek(this.player.getMedia().getDuration().multiply(ev.getX() / timeBar.getWidth()));
@@ -371,7 +424,7 @@ public class MusicPlayer extends Application {
             }
         });
 
-        chooseFolder.setOnAction(ev -> {
+        scanButton.setOnAction(ev -> {
             DirectoryChooser directoryChooser = new DirectoryChooser();
             directoryChooser.setTitle("Select music folder");
             File dir = new File(Preferences.userRoot().get("MusicPlayerPath", ""));
@@ -390,17 +443,32 @@ public class MusicPlayer extends Application {
                     }
                     works = true;
                     this.list = newList;
+                    this.currentFolder = "All";
                     data.clear();
-                    data.addAll(this.list.getNames());
-                    this.currentSong = this.list.getSongName(0);
+                    data.addAll(this.list.getFolderContents(this.currentFolder));
+                    this.currentSong = this.list.getSongName(0, this.currentFolder);
                     currentSongLabel.setText("Playing now: " + currentSong);
-                    this.nextSong = this.list.getNext(this.currentSong);
+                    this.nextSong = this.list.getNext(this.currentSong, this.currentFolder);
                     nextSongLabel.setText("Playing next: " + nextSong);
                     play.setGraphic(playPane);
                     play.setDisable(false);
                     playNext.setDisable(false);
                     this.player = newPlayer();
+                    this.songSelect = true;
                 }
+            }
+        });
+        foldersButton.setOnAction(ev -> {
+            if(this.songSelect) {
+                data.clear();
+                data.addAll(this.list.getFolderNames());
+                this.songSelect = false;
+            } else {
+                data.clear();
+                data.addAll(this.list.getFolderContents(this.currentFolder));
+                listView.getSelectionModel().select(currentSong);
+                listView.scrollTo(listView.getSelectionModel().getSelectedIndex());
+                this.songSelect = true;
             }
         });
         mute.setOnAction(e -> {
@@ -435,7 +503,7 @@ public class MusicPlayer extends Application {
         globalKeyListener = new GlobalKeyListener(play, playNext, mute, randomButton, loop, shuffleButton, Preferences.userRoot().get("MusicPlayerPlay1", "56-29-25"), Preferences.userRoot().get("MusicPlayerPlay2", "-1"), Preferences.userRoot().get("MusicPlayerPlayNext1", "56-29-49"), Preferences.userRoot().get("MusicPlayerPlayNext2", "-1"), Preferences.userRoot().get("MusicPlayerMute1", "56-29-50"), Preferences.userRoot().get("MusicPlayerMute2", "-1"), Preferences.userRoot().get("MusicPlayerRandom1", "56-29-19"), Preferences.userRoot().get("MusicPlayerRandom2", "-1"), Preferences.userRoot().get("MusicPlayerLoop1", "56-29-38"), Preferences.userRoot().get("MusicPlayerLoop2", "-1"), Preferences.userRoot().get("MusicPlayerShuffle1", "56-29-31"), Preferences.userRoot().get("MusicPlayerShuffle2", "-1"));
         GlobalScreen.addNativeKeyListener(globalKeyListener);
 
-        settings.setOnAction(e -> {
+        settingsButton.setOnAction(e -> {
             Stage settingsStage = new Stage();
             settingsStage.setResizable(false);
             settingsStage.setWidth(300);
@@ -803,7 +871,7 @@ public class MusicPlayer extends Application {
             settingsStage.show();
         });
         primaryStage.setResizable(false);
-        pan.getChildren().addAll(play, listView, currentSongLabel, nextSongLabel, settings, randomButton, loop, playNext, left, middle, right, volumeLabel, speedLabel, volumeSlider, speedSlider, timeBar, timeLabel, chooseFolder, mute, shuffleButton);
+        pan.getChildren().addAll(play, listView, currentSongLabel, nextSongLabel, settingsButton, randomButton, loop, playNext, left, middle, right, volumeLabel, speedLabel, volumeSlider, speedSlider, timeBar, timeLabel, scanButton, mute, shuffleButton, foldersButton);
         primaryStage.setTitle("MusicPlayer");
         primaryStage.show();
 
@@ -821,9 +889,9 @@ public class MusicPlayer extends Application {
             }
             currentSongLabel.setText("Playing now: " + currentSong);
             if (!random) {
-                nextSong = list.getNext(currentSong);
+                nextSong = list.getNext(currentSong, this.currentFolder);
             } else {
-                nextSong = list.getRandomSong(currentSong);
+                nextSong = list.getRandomSong(currentSong, this.currentFolder);
             }
             nextSongLabel.setText("Playing next: " + nextSong);
             listView.getSelectionModel().select(currentSong);
