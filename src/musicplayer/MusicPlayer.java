@@ -374,6 +374,10 @@ public class MusicPlayer extends Application {
         chooseFolder.setOnAction(ev -> {
             DirectoryChooser directoryChooser = new DirectoryChooser();
             directoryChooser.setTitle("Select music folder");
+            File dir = new File(Preferences.userRoot().get("MusicPlayerPath", ""));
+            if(dir.exists()) {
+                directoryChooser.setInitialDirectory(dir);
+            }
             File folder = null;
             folder = directoryChooser.showDialog(primaryStage);
             if (folder != null) {
