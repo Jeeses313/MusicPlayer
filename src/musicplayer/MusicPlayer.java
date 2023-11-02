@@ -220,6 +220,8 @@ public class MusicPlayer extends Application {
                         } else {
                             this.currentSong = this.list.getRandomSong("", this.currentFolder);
                             this.nextSong = this.list.getRandomSong(currentSong, this.currentFolder);
+                            listView.getSelectionModel().select(currentSong);
+                            listView.scrollTo(listView.getSelectionModel().getSelectedIndex());
                         }
                         currentSongLabel.setText("Playing now: " + currentSong);
                         nextSongLabel.setText("Playing next: " + nextSong);

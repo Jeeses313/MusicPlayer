@@ -6,6 +6,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.Random;
 import java.util.Stack;
+import java.util.stream.Collectors;
 import javafx.scene.media.Media;
 
 public class SongList {
@@ -37,15 +38,12 @@ public class SongList {
             this.initPart(musicFiles, folderStack);
             Collections.sort(folderNames.subList(1, folderNames.size()));
             for (String folderName : folderNames) {
-                this.folderContents.get(folderName).sort((name1, name2) -> name1.toLowerCase().compareTo(name2.toLowerCase()));
+                this.folderContents.put(folderName, new ArrayList<>(this.folderContents.get(folderName).stream().sorted((name1, name2) -> name1.toLowerCase().compareTo(name2.toLowerCase())).distinct().collect(Collectors.toList())));
             }
         } catch (Exception e) {
 
         }
-        if (this.folderContents.get("All").isEmpty()) {
-            return false;
-        }
-        return true;
+        return !this.folderContents.get("All").isEmpty();
     }
 
     private void initPart(File[] musicFiles, Stack<String> folderStack) throws Exception {
