@@ -67,10 +67,6 @@ public class SongList {
         }
     }
 
-    public Media getSong(int i, String folder) {
-        return new Media(this.songPaths.get(this.folderContents.get(folder).get(i)));
-    }
-
     public ArrayList<String> getFolderNames() {
         return folderNames;
     }
@@ -83,7 +79,7 @@ public class SongList {
         return this.folderContents.get(folder).size();
     }
 
-    public int getIndex(String name, String folder) {
+    private int getIndex(String name, String folder) {
         return this.folderContents.get(folder).indexOf(name);
     }
 
@@ -100,11 +96,12 @@ public class SongList {
     }
 
     public String getRandomSong(String currentSong, String folder) {
-        String newSong = this.folderContents.get(folder).get(new Random().nextInt(this.folderContents.get(folder).size()));
-        if (newSong.equals(currentSong)) {
-            return this.getNext(newSong, folder);
+        int newSongIndex = new Random().nextInt(this.folderContents.get(folder).size()-1);
+        int currentSongIndex = this.getIndex(currentSong, folder);
+        if(newSongIndex >= currentSongIndex) {
+            newSongIndex++;
         }
-        return newSong;
+        return this.getSongName(newSongIndex, folder);
     }
 
     public Media getSong(String name) {

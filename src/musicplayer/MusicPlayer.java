@@ -122,7 +122,7 @@ public class MusicPlayer extends Application {
         
         Button settingsButton = ComponentCreator.createButton(125, 220, 75, 20, "Hotkeys");
 
-        Button loop = ComponentCreator.createButton(385, 70, 100, 30, "Loop:all");
+        Button loopButton = ComponentCreator.createButton(385, 70, 100, 30, "Loop:all");
 
         Button randomButton = ComponentCreator.createButton(385, 100, 100, 30, "Random:off");
 
@@ -146,9 +146,9 @@ public class MusicPlayer extends Application {
         speedSlider.setSnapToTicks(true);
         speedSlider.setMinorTickCount(0);
 
-        Button play = ComponentCreator.createButton(205, 70, 90, 60, "");
+        Button playButton = ComponentCreator.createButton(205, 70, 90, 60, "");
         if (!works) {
-            play.setDisable(true);
+            playButton.setDisable(true);
         }
         Rectangle square1 = ComponentCreator.createRectangle(15, 5, 10, 40);
         Rectangle square2 = ComponentCreator.createRectangle(45, 5, 10, 40);
@@ -157,7 +157,7 @@ public class MusicPlayer extends Application {
         Polygon triangle = ComponentCreator.createTriangle(20, 25, 0, -20, 0, 20, 30, 0);
         Pane playPane = new Pane();
         playPane.getChildren().add(triangle);
-        play.setGraphic(playPane);
+        playButton.setGraphic(playPane);
 
         Button playNext = ComponentCreator.createButton(295, 70, 90, 60, "");
         if (!works) {
@@ -185,7 +185,7 @@ public class MusicPlayer extends Application {
             if (works) {
                 if(songSelect) {
                     if (ev.getButton() == MouseButton.PRIMARY) {
-                        play.setGraphic(pausePane);
+                        playButton.setGraphic(pausePane);
                         this.player.stop();
                         this.currentSong = listView.getSelectionModel().getSelectedItem();
                         currentSongLabel.setText("Playing now: " + currentSong);
@@ -229,9 +229,9 @@ public class MusicPlayer extends Application {
                         this.songSelect = true;
                         if(wasPlaying) {
                             this.player.play();
-                            play.setGraphic(pausePane);
+                            playButton.setGraphic(pausePane);
                         } else {
-                            play.setGraphic(playPane);
+                            playButton.setGraphic(playPane);
                         }
                     } else {
                         this.currentFolder = listView.getSelectionModel().getSelectedItem();
@@ -245,25 +245,25 @@ public class MusicPlayer extends Application {
             }
         });
 
-        play.setOnAction(e -> {
-            if (play.getGraphic().equals(pausePane)) {
+        playButton.setOnAction(e -> {
+            if (playButton.getGraphic().equals(pausePane)) {
                 this.player.pause();
-                play.setGraphic(playPane);
-            } else if (play.getGraphic().equals(playPane)) {
+                playButton.setGraphic(playPane);
+            } else if (playButton.getGraphic().equals(playPane)) {
                 this.player.play();
-                play.setGraphic(pausePane);
+                playButton.setGraphic(pausePane);
             }
         });
 
-        loop.setOnAction(e -> {
+        loopButton.setOnAction(e -> {
             if (this.loopAll) {
                 this.loopAll = false;
-                loop.setText("Loop:one");
+                loopButton.setText("Loop:one");
                 playNext.setDisable(true);
                 nextSongLabel.setDisable(true);
             } else {
                 this.loopAll = true;
-                loop.setText("Loop:all");
+                loopButton.setText("Loop:all");
                 if (works) {
                     playNext.setDisable(false);
                 }
@@ -369,7 +369,7 @@ public class MusicPlayer extends Application {
             player.dispose();
             player = newPlayer();
             player.play();
-            play.setGraphic(pausePane);
+            playButton.setGraphic(pausePane);
         });
 
         left.setOnAction(e -> {
@@ -452,8 +452,8 @@ public class MusicPlayer extends Application {
                     currentSongLabel.setText("Playing now: " + currentSong);
                     this.nextSong = this.list.getNext(this.currentSong, this.currentFolder);
                     nextSongLabel.setText("Playing next: " + nextSong);
-                    play.setGraphic(playPane);
-                    play.setDisable(false);
+                    playButton.setGraphic(playPane);
+                    playButton.setDisable(false);
                     playNext.setDisable(false);
                     this.player = newPlayer();
                     this.songSelect = true;
@@ -502,7 +502,7 @@ public class MusicPlayer extends Application {
         logger.setLevel(Level.WARNING);
         logger.setUseParentHandlers(false);
         GlobalScreen.registerNativeHook();
-        globalKeyListener = new GlobalKeyListener(play, playNext, mute, randomButton, loop, shuffleButton, Preferences.userRoot().get("MusicPlayerPlay1", "56-29-25"), Preferences.userRoot().get("MusicPlayerPlay2", "-1"), Preferences.userRoot().get("MusicPlayerPlayNext1", "56-29-49"), Preferences.userRoot().get("MusicPlayerPlayNext2", "-1"), Preferences.userRoot().get("MusicPlayerMute1", "56-29-50"), Preferences.userRoot().get("MusicPlayerMute2", "-1"), Preferences.userRoot().get("MusicPlayerRandom1", "56-29-19"), Preferences.userRoot().get("MusicPlayerRandom2", "-1"), Preferences.userRoot().get("MusicPlayerLoop1", "56-29-38"), Preferences.userRoot().get("MusicPlayerLoop2", "-1"), Preferences.userRoot().get("MusicPlayerShuffle1", "56-29-31"), Preferences.userRoot().get("MusicPlayerShuffle2", "-1"));
+        globalKeyListener = new GlobalKeyListener(playButton, playNext, mute, randomButton, loopButton, shuffleButton, Preferences.userRoot().get("MusicPlayerPlay1", "56-29-25"), Preferences.userRoot().get("MusicPlayerPlay2", "-1"), Preferences.userRoot().get("MusicPlayerPlayNext1", "56-29-49"), Preferences.userRoot().get("MusicPlayerPlayNext2", "-1"), Preferences.userRoot().get("MusicPlayerMute1", "56-29-50"), Preferences.userRoot().get("MusicPlayerMute2", "-1"), Preferences.userRoot().get("MusicPlayerRandom1", "56-29-19"), Preferences.userRoot().get("MusicPlayerRandom2", "-1"), Preferences.userRoot().get("MusicPlayerLoop1", "56-29-38"), Preferences.userRoot().get("MusicPlayerLoop2", "-1"), Preferences.userRoot().get("MusicPlayerShuffle1", "56-29-31"), Preferences.userRoot().get("MusicPlayerShuffle2", "-1"));
         GlobalScreen.addNativeKeyListener(globalKeyListener);
 
         settingsButton.setOnAction(e -> {
@@ -873,7 +873,7 @@ public class MusicPlayer extends Application {
             settingsStage.show();
         });
         primaryStage.setResizable(false);
-        pan.getChildren().addAll(play, listView, currentSongLabel, nextSongLabel, settingsButton, randomButton, loop, playNext, left, middle, right, volumeLabel, speedLabel, volumeSlider, speedSlider, timeBar, timeLabel, scanButton, mute, shuffleButton, foldersButton);
+        pan.getChildren().addAll(playButton, listView, currentSongLabel, nextSongLabel, settingsButton, randomButton, loopButton, playNext, left, middle, right, volumeLabel, speedLabel, volumeSlider, speedSlider, timeBar, timeLabel, scanButton, mute, shuffleButton, foldersButton);
         primaryStage.setTitle("MusicPlayer");
         primaryStage.show();
 
@@ -888,14 +888,14 @@ public class MusicPlayer extends Application {
             player.stop();
             if (loopAll) {
                 currentSong = nextSong;
+                currentSongLabel.setText("Playing now: " + currentSong);
+                if (!random) {
+                    nextSong = list.getNext(currentSong, this.currentFolder);
+                } else {
+                    nextSong = list.getRandomSong(currentSong, this.currentFolder);
+                }
+                nextSongLabel.setText("Playing next: " + nextSong);
             }
-            currentSongLabel.setText("Playing now: " + currentSong);
-            if (!random) {
-                nextSong = list.getNext(currentSong, this.currentFolder);
-            } else {
-                nextSong = list.getRandomSong(currentSong, this.currentFolder);
-            }
-            nextSongLabel.setText("Playing next: " + nextSong);
             listView.getSelectionModel().select(currentSong);
             listView.scrollTo(listView.getSelectionModel().getSelectedIndex());
             player.dispose();
